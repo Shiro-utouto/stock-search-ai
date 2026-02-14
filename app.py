@@ -29,7 +29,7 @@ def get_stock_data(code):
 
 def analyze_with_ai(text, code):
     """Gemini 2.0 Flash で解析"""
-    # ★ここをあなたのリストにあった最新モデルに変更しました
+    # ★あなたのリストにあった「gemini-2.0-flash」をここで指定します
     model = genai.GenerativeModel('gemini-2.0-flash')
     
     prompt = f"""
@@ -72,16 +72,13 @@ if st.button("調べる 🔍", type="primary"):
         st.warning("数字4桁で入力してください")
     else:
         with st.spinner(f"コード {code} をAIが解析中..."):
-            # 1. データ取得
             raw_text = get_stock_data(code)
-            
             if raw_text:
                 try:
-                    # 2. AI解析
                     result = analyze_with_ai(raw_text, code)
                     st.markdown(result)
                     st.success("解析完了！")
                 except Exception as e:
-                    st.error(f"AIエラーが発生しました: {e}")
+                    st.error(f"AIエラー: {e}")
             else:
                 st.error("データの取得に失敗しました。コードが正しいか確認してください。")
