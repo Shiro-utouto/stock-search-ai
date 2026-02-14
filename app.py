@@ -3,74 +3,85 @@ import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
 
+# --- ページ設定 ---
 st.set_page_config(page_title="株主優待AI", page_icon="🎁")
 
-# --- 1. APIキーの確認と設定 ---
+# --- APIキー読み込み ---
 api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
-    st.error("❌ APIキーが設定されていません。Secretsを確認してください。")
+    st.error("❌ APIキーが設定されていません。")
     st.stop()
 
-# 余計なスペースが入っているとエラーになるので削除する処理
 genai.configure(api_key=api_key.strip())
 
-# --- 2. 診断モード（サイドバー） ---
-st.sidebar.header("🔧 診断メニュー")
-if st.sidebar.button("接続テストを実行"):
-    try:
-        st.sidebar.info("AIに接続中...")
-        # 使えるモデルの一覧を取得してみる
-        models = [m.name for m in genai.list_models()]
-        st.sidebar.success("✅ 接続成功！")
-        st.sidebar.write("使えるモデル:", models)
-    except Exception as e:
-        st.sidebar.error(f"❌ 接続失敗: {e}")
-        st.sidebar.warning("APIキーが間違っているか、有効になっていない可能性があります。")
-
-# --- 3. メイン機能 ---
 def get_stock_data(code):
+    """Yahoo!ファイナンスから情報を取得"""
     url = f"https://finance.yahoo.co.jp/quote/{code}.T/incentive"
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
         res = requests.get(url, headers=headers)
         res.raise_for_status()
         soup = BeautifulSoup(res.text, 'html.parser')
+        # 余計な空白を削除してテキスト化
         return soup.get_text(separator="\n", strip=True)[:15000]
     except Exception as e:
         return None
 
 def analyze_with_ai(text, code):
-    # 最新のモデル名を指定
-    target_model = 'gemini-1.5-flash'
-    model = genai.GenerativeModel(target_model)
+    """Gemini 2.0 Flash で解析"""
+    # ★ここをあなたのリストにあった最新モデルに変更しました
+    model = genai.GenerativeModel('gemini-2.0-flash')
     
     prompt = f"""
-    銘柄コード「{code}」の株主優待情報です。以下をまとめてください。
-    1. 配当金と利回り
-    2. 権利確定月
-    3. 優待内容（具体的に）
+    あなたは投資アシスタントです。
+    以下のテキストは銘柄コード「{code}」のYahoo!ファイナンス（株主優待ページ）の情報です。
+    ここから重要な情報を抽出し、スマホで見やすいようにマークダウン形式で整理してください。
+
+    【出力フォーマット】
+    ## 🏢 {code} の優待情報
     
-    データ: {text}
+    ### 💰 配当・権利日
+    - **予想配当**: (ここに入れる)
+    - **配当利回り**: (ここに入れる)
+    - **権利確定月**: (ここに入れる)
+    
+    ### 🎁 株主優待の内容
+    (ここに具体的な優待内容、条件、金額などを箇条書きで分かりやすく要約する)
+
+    ### 📅 優待の権利確定月
+    (ここに入れる)
+
+    ---
+    ※情報が見つからない項目は「記載なし」としてください。
+    
+    解析対象データ:
+    {text}
     """
+    
     response = model.generate_content(prompt)
     return response.text
 
+# --- アプリ画面 ---
 st.title("🎁 株主優待＆配当AI")
+st.caption("最新AI (Gemini 2.0) が詳細を調べます")
+
 code = st.text_input("銘柄コード（例: 7203）", max_chars=4)
 
-if st.button("調べる 🔍"):
+if st.button("調べる 🔍", type="primary"):
     if not code.isdigit():
         st.warning("数字4桁で入力してください")
     else:
-        with st.spinner(f"{code} を検索中..."):
+        with st.spinner(f"コード {code} をAIが解析中..."):
+            # 1. データ取得
             raw_text = get_stock_data(code)
+            
             if raw_text:
                 try:
+                    # 2. AI解析
                     result = analyze_with_ai(raw_text, code)
-                    st.markdown("### 📊 分析結果")
-                    st.write(result)
+                    st.markdown(result)
+                    st.success("解析完了！")
                 except Exception as e:
-                    st.error(f"AIエラー: {e}")
-                    st.info("👈 左上の「>」を押してサイドバーを開き、「接続テスト」を試してください。")
+                    st.error(f"AIエラーが発生しました: {e}")
             else:
-                st.error("データが取得できませんでした。コードを確認してください。")
+                st.error("データの取得に失敗しました。コードが正しいか確認してください。")
