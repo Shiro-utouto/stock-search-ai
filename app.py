@@ -28,9 +28,9 @@ def get_stock_data(code):
         return None
 
 def analyze_with_ai(text, code):
-    """Gemini 2.0 Flash で解析"""
-    # ★あなたのリストにあった「gemini-2.0-flash」をここで指定します
-    model = genai.GenerativeModel('gemini-2.0-flash')
+    """Gemini Flash Latest で解析"""
+    # ★あなたのリストのNo.16にあった、一番安全なモデル名を使います
+    model = genai.GenerativeModel('gemini-flash-latest')
     
     prompt = f"""
     あなたは投資アシスタントです。
@@ -63,7 +63,7 @@ def analyze_with_ai(text, code):
 
 # --- アプリ画面 ---
 st.title("🎁 株主優待＆配当AI")
-st.caption("最新AI (Gemini 2.0) が詳細を調べます")
+st.caption("AI (Flash Latest) が詳細を調べます")
 
 code = st.text_input("銘柄コード（例: 7203）", max_chars=4)
 
@@ -72,13 +72,18 @@ if st.button("調べる 🔍", type="primary"):
         st.warning("数字4桁で入力してください")
     else:
         with st.spinner(f"コード {code} をAIが解析中..."):
+            # 1. データ取得
             raw_text = get_stock_data(code)
+            
             if raw_text:
                 try:
+                    # 2. AI解析
                     result = analyze_with_ai(raw_text, code)
                     st.markdown(result)
                     st.success("解析完了！")
                 except Exception as e:
-                    st.error(f"AIエラー: {e}")
+                    # エラー内容を詳しく表示
+                    st.error(f"エラーが発生しました: {e}")
+                    st.write("もしQuotaエラーが出る場合は、しばらく時間をおいて試してください。")
             else:
                 st.error("データの取得に失敗しました。コードが正しいか確認してください。")
