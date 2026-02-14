@@ -36,7 +36,7 @@ def get_stock_data(code):
 
 def analyze_with_ai(text, code):
     """Gemini AIで情報を抽出・整理"""
-    model = genai.GenerativeModel('gemini-1.5-flash') # 無料枠で高速なモデル
+    model = genai.GenerativeModel('gemini-pro') # 無料枠で高速なモデル
     
     prompt = f"""
     あなたはプロの投資家アシスタントです。
